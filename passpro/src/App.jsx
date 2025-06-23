@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
 import "./App.css";
 
 function App() {
@@ -10,11 +11,14 @@ function App() {
   const [form, useForm] = useState({ url: "", username: "", password: "" });
   const [passwordArray, setPasswordArray] = useState([]);
 
+  const getPass = async () => {
+    let req = await fetch("http://localhost:3000/");
+    let passwords = await req.json();
+    setPasswordArray(passwords);
+  };
+
   useEffect(() => {
-    let passwords = localStorage.getItem("passwords");
-    if (passwords) {
-      setPasswordArray(JSON.parse(passwords));
-    }
+    getPass();
   }, []);
   const changeVis = () => {
     console.log("fn called");
@@ -39,23 +43,38 @@ function App() {
     useForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const storePass = () => {
+  const storePass = async () => {
     console.log(form);
     if (form != { url: "", username: "", password: "" }) {
-      setPasswordArray([...passwordArray, form]);
-      localStorage.setItem(
+      setPasswordArray([...passwordArray, { ...form, id: uuidv4() }]);
+      await fetch("http://localhost:3000/", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: form.id }),
+      });
+      await fetch("http://localhost:3000/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, id: uuidv4() }),
+      });
+      /*localStorage.setItem(
         "passwords",
         JSON.stringify([...passwordArray, form])
-      );
+      );*/
       console.log(passwordArray);
     }
     useForm({ url: "", username: "", password: "" });
   };
 
-  const deletePass = (indexToDelete) => {
+  const deletePass = async (indexToDelete) => {
+    const deletedItem = passwordArray[indexToDelete];
     const updated = passwordArray.filter((_, idx) => idx !== indexToDelete);
     setPasswordArray(updated);
-    localStorage.setItem("passwords", JSON.stringify(updated));
+    await fetch("http://localhost:3000/", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: deletedItem.id }),
+    });
   };
   return (
     <>
@@ -88,6 +107,7 @@ function App() {
       <div className="flex-col justify-self-center justify-center w-1/2 mt-8 h-50">
         <input
           ref={urli}
+          id=""
           type="text"
           placeholder="Enter website URL"
           className="border-2 border-green-400 rounded-4xl w-1/1 h-1/4 mb-4 p-4 focus:border-green-600 focus:outline focus:outline-green-600"
@@ -97,6 +117,7 @@ function App() {
         ></input>
         <input
           ref={useri}
+          id=""
           type="text"
           placeholder="Enter Username"
           className="border-2 border-green-400 rounded-4xl w-1/1 h-1/4 mb-4 p-4 focus:border-green-600 focus:outline focus:outline-green-600"
@@ -107,6 +128,7 @@ function App() {
         <div className="relative">
           <input
             ref={pi}
+            id=""
             type="text"
             placeholder="Enter Password"
             className="border-2 border-green-400 rounded-4xl w-1/1 h-1/4 p-4 mb-6 focus:border-green-600 focus:outline focus:outline-green-600"
